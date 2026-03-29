@@ -1,15 +1,15 @@
 """
 Trabalho1 - Sistema de Gerenciamento de Banco de Dados (SGBD)
-Módulo principal para testes da árvore ISAM
+Pacote principal da simulação ISAM.
 """
 
 from src.core.isam_tree import ISAMTree
 from src.main import Menu
 
-# Criar instância da árvore ISAM
-arvore_isam = ISAMTree()
+__all__ = ["ISAMTree", "Menu", "run"]
 
-# Testes
-# arvore_isam.get_tree()
 
-menu = Menu(arvore_isam)
+def run():
+    """Ponto de entrada opcional para iniciar o menu interativo."""
+    arvore_isam = ISAMTree()
+    Menu(arvore_isam)

@@ -1,13 +1,9 @@
 # src/core/isam_tree.py
-from ..operations import remover
 from ..operations import searcher
 from ..metrics.search_metrics import SearchMetrics
 from .page_manager import PageManager
 from .primary_page import PrimaryPage
 from .overflow_page import OverflowPage
-
-# Capacidade máxima definida pelo escopo (2 registros por página folha/overflow)
-CAPACIDADE_PAGINA = 2
 
 
 class ISAMTree:
@@ -37,8 +33,20 @@ class ISAMTree:
         folha_F = [ [(63, "R63"), (97, "R97")], [] ]
         
         self.folhas = [folha_A, folha_B, folha_C, folha_D, folha_E, folha_F]
-        no1_esq = [ [20, 33], [folha_A, folha_B, folha_C] ]
-        no1_dir = [ [51, 63], [folha_D, folha_E, folha_F] ]
+
+        # Nível intermediário 2: cada nó aponta para uma folha primária específica
+        no2_A = [[10, 15], [folha_A]]
+        no2_B = [[20, 27], [folha_B]]
+        no2_C = [[33, 37], [folha_C]]
+        no2_D = [[40, 46], [folha_D]]
+        no2_E = [[51, 55], [folha_E]]
+        no2_F = [[63, 97], [folha_F]]
+
+        # Nível intermediário 1
+        no1_esq = [[20, 33], [no2_A, no2_B, no2_C]]
+        no1_dir = [[51, 63], [no2_D, no2_E, no2_F]]
+
+        # Raiz
         self.raiz = [ [40], [no1_esq, no1_dir] ]
     
     def get_raiz(self):
@@ -52,11 +60,18 @@ class ISAMTree:
         print(f"  Chaves: {self.get_raiz()[0]}")
         print(f"  Filhos: {len(self.get_raiz()[1])}")
 
-        print("\nNós Intermediários:")
-        for i, no in enumerate(self.get_raiz()[1]):
-            print(f"  Nó {i + 1}:")
-            print(f"    Chaves: {no[0]}")
-            print(f"    Filhos (folhas): {len(no[1])}")
+        print("\nNós Intermediários - Nível 1:")
+        for i, no_n1 in enumerate(self.get_raiz()[1]):
+            print(f"  Nó N1.{i + 1}:")
+            print(f"    Chaves: {no_n1[0]}")
+            print(f"    Filhos (nós N2): {len(no_n1[1])}")
+
+        print("\nNós Intermediários - Nível 2:")
+        for i, no_n1 in enumerate(self.get_raiz()[1]):
+            for j, no_n2 in enumerate(no_n1[1]):
+                print(f"  Nó N2.{i + 1}.{j + 1}:")
+                print(f"    Chaves: {no_n2[0]}")
+                print(f"    Filhos (folhas): {len(no_n2[1])}")
 
         print("\nFolhas Primárias:")
         for i, folha in enumerate(self.get_folhas()):
@@ -82,15 +97,16 @@ class ISAMTree:
         return total_overflows
 
     def average_overflow_length(self):
-        total_paginas = 0
-        total_registros = 0
-        for folha in self.folhas:
-            total_paginas += len(folha[1])
-            for pagina_lista in folha[1]:
-                total_registros += len(pagina_lista)
-        if total_paginas == 0:
+        """
+        Tamanho médio das cadeias de overflow (em páginas por folha com overflow).
+        """
+        cadeias = [len(folha[1]) for folha in self.folhas if folha[1]]
+        if not cadeias:
             return 0.0
-        return round(total_registros / total_paginas, 2)
+        return round(sum(cadeias) / len(cadeias), 2)
+
+    def count_leaf_pages(self):
+        return len(self.folhas)
     
     def remove(self, key):
         primary_page, folha_lista = self._navigate_to_primary_page(key)
@@ -117,38 +133,46 @@ class ISAMTree:
         raiz = self.raiz[0][0]
         
         # Escolhe qual nó intermediário seguir
-        if int(key) <= raiz:
+        if int(key) < raiz:
             no_intermediario = self.raiz[1][0]
         else:
             no_intermediario = self.raiz[1][1]
         
-        # Encontra a folha primária correta baseado nas chaves do nó intermediário
+        # Nível intermediário 1 -> escolhe nó intermediário 2
         chaves = no_intermediario[0]
-        folhas = no_intermediario[1]
+        nos_n2 = no_intermediario[1]
         
         key_int = int(key)
         
         if key_int < chaves[0]:
-            folha_lista = folhas[0]
+            no_n2 = nos_n2[0]
         elif key_int < chaves[1]:
-            folha_lista = folhas[1]
+            no_n2 = nos_n2[1]
         else:
-            folha_lista = folhas[2]
-        
+            no_n2 = nos_n2[2]
+
+        # Nível intermediário 2 -> folha primária
+        folha_lista = no_n2[1][0] if not self._is_leaf_page(no_n2) else no_n2
+
         # Converte a lista para uma instância de PrimaryPage
         page = PrimaryPage(folha_lista[0].copy())
         
-        previous_overflow = None
         for over_list in folha_lista[1]:
             over_page = OverflowPage(over_list.copy())
-            if previous_overflow is None:
-                page.add_overflow(over_page)
-            else:
-                previous_overflow.set_next_page(over_page)
-                page.overflows.append(over_page)
-            previous_overflow = over_page
+            page.add_overflow(over_page)
             
         return page, folha_lista
+
+    @staticmethod
+    def _is_leaf_page(node):
+        if not isinstance(node, list) or len(node) != 2:
+            return False
+        records = node[0]
+        if not isinstance(records, list):
+            return False
+        if not records:
+            return True
+        return isinstance(records[0], tuple)
 
     def _sync_page_to_list(self, primary_page, folha_lista):
         folha_lista[0] = primary_page.get_records()

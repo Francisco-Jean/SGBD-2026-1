@@ -1,6 +1,4 @@
 from src.core.isam_tree import ISAMTree
-from src.core.overflow_page import OverflowPage
-from src.core.page_manager import PageManager
 
 
 class Menu:

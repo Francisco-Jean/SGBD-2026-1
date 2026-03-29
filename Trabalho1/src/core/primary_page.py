@@ -68,9 +68,43 @@ class PrimaryPage:
         Args:
             overflow_page: Instância de OverflowPage
         """
-        self.overflows.append(overflow_page)
+        if overflow_page is None:
+            return
+
         if not self.next_overflow:
             self.next_overflow = overflow_page
+            self.sync_overflow_index()
+            return
+
+        tail = self.next_overflow
+        visited = {id(tail)}
+
+        # Evita loop acidental no encadeamento
+        while tail.get_next_page() and id(tail.get_next_page()) not in visited:
+            tail = tail.get_next_page()
+            visited.add(id(tail))
+
+        tail.set_next_page(overflow_page)
+        self.sync_overflow_index()
+
+    def set_next_overflow(self, overflow_page):
+        """Define explicitamente a primeira página de overflow."""
+        self.next_overflow = overflow_page
+        self.sync_overflow_index()
+
+    def sync_overflow_index(self):
+        """
+        Reconstrói a lista auxiliar de overflows com base no encadeamento.
+        Mantém `overflows` e `next_overflow` consistentes.
+        """
+        self.overflows = []
+        current = self.next_overflow
+        seen = set()
+
+        while current and id(current) not in seen:
+            seen.add(id(current))
+            self.overflows.append(current)
+            current = current.get_next_page()
     
     def get_next_overflow(self):
         """Obtém a primeira página de overflow."""

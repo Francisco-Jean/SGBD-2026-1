@@ -16,6 +16,28 @@ def _get_tree_parts(isam_tree):
     return root_key, left_node, right_node
 
 
+def _is_leaf_page(node):
+    if not isinstance(node, list) or len(node) != 2:
+        return False
+    records = node[0]
+    if not isinstance(records, list):
+        return False
+    if not records:
+        return True
+    return isinstance(records[0], tuple)
+
+
+def _extract_leaf(node):
+    """
+    Aceita:
+    - folha direta [ [registros], [overflows] ]
+    - nó intermediário de nível 2 [ [chaves], [folha] ]
+    """
+    if _is_leaf_page(node):
+        return node
+    return node[1][0]
+
+
 def _navigate_to_leaf(isam_tree, key):
     """
     Navega pela árvore e retorna a folha alvo com metadados do caminho.
@@ -26,20 +48,23 @@ def _navigate_to_leaf(isam_tree, key):
     visited_pages = ["raiz"]
     nodes_visited = 1
 
-    if key <= root_key:
+    # No ISAM desta estrutura, a raiz 40 separa:
+    # esquerda: chaves < 40
+    # direita: chaves >= 40
+    if key < root_key:
         inter_node = left_node
-        inter_label = "intermediario_esquerdo"
+        inter_label = "intermediario_n1_esquerdo"
         base_index = 0
     else:
         inter_node = right_node
-        inter_label = "intermediario_direito"
+        inter_label = "intermediario_n1_direito"
         base_index = 3
 
-    visited_pages.append(inter_label)
+    sep1, sep2 = inter_node[0]
+    visited_pages.append(f"{inter_label}[{sep1},{sep2}]")
     nodes_visited += 1
 
-    sep1, sep2 = inter_node[0]
-    leaves = inter_node[1]
+    level2_nodes = inter_node[1]
 
     if key < sep1:
         local_leaf_index = 0
@@ -49,7 +74,17 @@ def _navigate_to_leaf(isam_tree, key):
         local_leaf_index = 2
 
     global_leaf_index = base_index + local_leaf_index
-    leaf = leaves[local_leaf_index]
+    level2_node = level2_nodes[local_leaf_index]
+    leaf = _extract_leaf(level2_node)
+
+    if _is_leaf_page(level2_node):
+        n2_label = f"intermediario_n2_{global_leaf_index + 1}"
+    else:
+        n2k1, n2k2 = level2_node[0]
+        n2_label = f"intermediario_n2[{n2k1},{n2k2}]"
+
+    visited_pages.append(n2_label)
+    nodes_visited += 1
 
     visited_pages.append(f"folha_{global_leaf_index + 1}")
     nodes_visited += 1
@@ -70,11 +105,13 @@ def _iter_overflow_pages(leaf):
     - objetos com get_records()/get_next_page() (modelo OO)
     """
     overflows = leaf[1] if len(leaf) > 1 else []
+    seen = set()
 
     for overflow in overflows:
         if hasattr(overflow, "get_records"):
             current = overflow
-            while current:
+            while current and id(current) not in seen:
+                seen.add(id(current))
                 yield current
                 current = current.get_next_page()
         else:
@@ -160,7 +197,10 @@ def search_equal(isam_tree, key, metrics=None):
 
 def _flatten_leaves_in_order(isam_tree):
     _, left_node, right_node = _get_tree_parts(isam_tree)
-    return left_node[1] + right_node[1]
+    leaves = []
+    for node in left_node[1] + right_node[1]:
+        leaves.append(_extract_leaf(node))
+    return leaves
 
 
 def search_range(isam_tree, start_key, end_key):
@@ -178,8 +218,9 @@ def search_range(isam_tree, start_key, end_key):
     leaves = _flatten_leaves_in_order(isam_tree)
 
     results = []
-    visited_pages = nav["visited_pages"][:-1]  # raiz + nó intermediário inicial
-    nodes_visited = 2
+    # raiz + nível intermediário 1 + nível intermediário 2 (sem repetir a folha inicial)
+    visited_pages = nav["visited_pages"][:-1]
+    nodes_visited = nav["nodes_visited"] - 1
 
     for leaf_index in range(nav["global_leaf_index"], len(leaves)):
         leaf = leaves[leaf_index]
