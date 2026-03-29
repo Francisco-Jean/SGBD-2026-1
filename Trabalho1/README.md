@@ -56,6 +56,28 @@ Implementar uma simulação funcional de índice ISAM para analisar inserções,
 - Com duplicatas permitidas, as chaves já existentes na base inicial (`27` e `63`) foram inseridas novamente, aumentando cadeia de overflow e custo médio.
 - As remoções obrigatórias foram efetivas (`5/5`) e a reorganização da cadeia manteve o comportamento esperado.
 
+## Exemplo de caminho das buscas
+### Exemplo 1 - Busca por igualdade (`buscar(35)`)
+- Caminho percorrido:
+  - `raiz`
+  - `intermediario_n1_esquerdo[20,33]` (35 é menor que 40, então segue para o ramo esquerdo)
+  - `intermediario_n2[33,37]` (35 fica na faixa da folha 3)
+  - `folha_3`
+  - `overflow_3_1` (registro encontrado no overflow)
+- Registro retornado: `(35, 'R35')`
+- Custo: `5` nós percorridos
+
+### Exemplo 2 - Busca por intervalo (`buscar_intervalo(60,90)`)
+- Caminho percorrido:
+  - `raiz`
+  - `intermediario_n1_direito[51,63]` (início do intervalo 60 é maior que 40)
+  - `intermediario_n2[51,55]` (primeira folha candidata para iniciar a varredura)
+  - `folha_5`
+  - `folha_6`
+  - `overflow_6_1 -> overflow_6_2 -> overflow_6_3`
+- Registros retornados: `[(63, 'R63'), (63, 'R63'), (86, 'R86')]`
+- Custo: `8` nós percorridos
+
 ## Simulação detalhada
 Os resultados completos da simulação obrigatória estão em:
 - [`simulação.md`](./simulação.md)
