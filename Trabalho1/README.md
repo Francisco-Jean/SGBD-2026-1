@@ -1,5 +1,9 @@
 # ISAM - Trabalho Prático (SGBD 2026.1)
 
+Anna Beatriz Vieira Sousa - 538758
+Francisco Jean da Silva de Sousa - 541790
+Lucas Lopes de Sousa - 537512
+
 ## Como rodar o código
 No diretório `Trabalho1`:
 
