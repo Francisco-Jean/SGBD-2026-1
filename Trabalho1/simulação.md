@@ -5,6 +5,33 @@
 - Inserções rejeitadas: `0`
 - Remoções efetivas: `5`
 - Remoções falhas: `0`
+- Custo total das inserções obrigatórias: `66` nós
+- Custo total das remoções obrigatórias: `39` nós
+
+## Custos das inserções obrigatórias
+| Ordem | Registro inserido | Custo (nós) | Overflow visitadas | Overflow criadas |
+| :--- | :--- | :---: | :---: | :---: |
+| 1 | `(18, 'R18')` | 5 | 1 | 1 |
+| 2 | `(22, 'R22')` | 5 | 1 | 1 |
+| 3 | `(27, 'R27')` | 5 | 1 | 0 |
+| 4 | `(35, 'R35')` | 5 | 1 | 1 |
+| 5 | `(41, 'R41')` | 5 | 1 | 1 |
+| 6 | `(44, 'R44')` | 5 | 1 | 0 |
+| 7 | `(63, 'R63')` | 5 | 1 | 1 |
+| 8 | `(67, 'R67')` | 5 | 1 | 0 |
+| 9 | `(83, 'R83')` | 6 | 2 | 1 |
+| 10 | `(86, 'R86')` | 6 | 2 | 0 |
+| 11 | `(121, 'R121')` | 7 | 3 | 1 |
+| 12 | `(145, 'R145')` | 7 | 3 | 0 |
+
+## Custos das remoções obrigatórias
+| Ordem | Registro alvo removido | Custo (nós) | Overflow visitadas |
+| :--- | :--- | :---: | :---: |
+| 1 | chave `27` (registro `R27`) | 6 | 2 |
+| 2 | chave `44` (registro `R44`) | 6 | 2 |
+| 3 | chave `67` (registro `R67`) | 8 | 4 |
+| 4 | chave `83` (registro `R83`) | 9 | 5 |
+| 5 | chave `145` (registro `R145`) | 10 | 6 |
 
 ## Operações executadas
 
