@@ -53,7 +53,7 @@ class PageManager:
     def remove_with_reorganization(primary_page, key):
         
         # Tenta remover da página primária
-        if primary_page.remove(key):
+        if primary_page.remove_record(key):
 
             PageManager._clean_empty_overflows(primary_page)
             return True
@@ -62,7 +62,7 @@ class PageManager:
         overflow = primary_page.get_next_overflow()
         
         while overflow:
-            if overflow.remove(key):
+            if overflow.remove_record(key):
                 # Remove páginas de overflow vazias
                 PageManager._clean_empty_overflows(primary_page)
                 return True
