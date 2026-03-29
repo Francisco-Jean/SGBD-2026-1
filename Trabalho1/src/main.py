@@ -1,10 +1,9 @@
 from src.core.isam_tree import ISAMTree
-from src.core.page_manager import PageManager
 from src.core.overflow_page import OverflowPage
+from src.core.page_manager import PageManager
 
 
 class Menu:
-
     def __init__(self, arvore_isam):
         self.arvore = arvore_isam
         self.show_menu()
@@ -12,11 +11,14 @@ class Menu:
     def show_menu(self):
         print("=" * 60 + "\n")
         print("Qual operação deseja realizar?\n")
-        print("[1] Visualizar árvore atual\n" + 
-              "[2] Inserir nó\n" + 
-              "[3] Remover nó" + "\n" + 
-              "[4] Buscar nó\n" + 
-              "[5] Sair\n")
+        print(
+            "[1] Visualizar árvore atual\n"
+            + "[2] Inserir nó\n"
+            + "[3] Remover nó"
+            + "\n"
+            + "[4] Buscar nó\n"
+            + "[5] Sair\n"
+        )
         print("\n" + "=" * 60)
         option = input("Digite a opção desejada: ")
 
