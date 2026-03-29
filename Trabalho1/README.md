@@ -45,18 +45,20 @@ O sistema processou o lote de 5 remoções obrigatórias (chaves 27, 44, 67, 83,
 
 ### 3.1. Rastreamento de Busca por Igualdade
 
-Para ilustrar a navegação, analisamos o caminho percorrido durante a busca pela chave **[PREENCHER: escolher uma chave solicitada, ex: 22 ou 90]**:
+Para ilustrar a navegação, analisamos o caminho percorrido durante a busca pela chave **90**:
 
-* **Caminho percorrido:** Raiz -> Nó Intermediário X -> Nó Intermediário Y -> Folha Z -> [PREENCHER: Overflow W, se aplicável].
-* **Custo:** [PREENCHER] nós percorridos.
-* **Explicação:** A busca iniciou na raiz, avaliando se a chave era menor ou maior que o separador. O percurso desceu pelos níveis intermediários refinando a navegação até atingir a folha correspondente.
+* **Caminho percorrido:** Raiz -> Nó Intermediário Direito -> Folha 6.
+* **Custo:** 3 nós percorridos.
+* **Explicação:** A busca iniciou na raiz, avaliando se a chave era menor ou maior que o separador. Como 90 > 40, seguiu para o ramo direito. Em seguida, no nó intermediário direito (51, 63), como 90 >= 63, a navegação chegou à Folha 6. Não houve acesso a overflow nesse caso.
 
 ### 3.2. Rastreamento de Busca por Intervalo
 
-Analisamos a operação `buscar_intervalo([PREENCHER: ex: 60, 90])`:
+Analisamos a operação `buscar_intervalo(60, 90)`:
 
-* **Caminho percorrido:** A busca localizou a primeira folha elegível (Folha X) e realizou uma varredura sequencial através dos ponteiros de folha e cadeias de overflow até ultrapassar o limite superior do intervalo.
-* **Custo:** [PREENCHER] nós percorridos.
+* **Caminho percorrido:** Raiz -> Nó Intermediário Direito -> Folha 5 -> Folha 6
+* **Custo:** 4 nós percorridos.
+* **Explicação:** A busca começa na raiz (chave separadora 40). Como o início do intervalo é 60 e 60 > 40, a navegação desce para o nó intermediário direito (separadores 51 e 63). Nesse nó, a chave 60 fica entre 51 e 63, então a primeira folha candidata é a Folha 5.
+Na Folha 5, os registros são (51, R51) e (55, R55), ambos menores que 60, então nenhum entra no resultado. Em seguida, a busca continua sequencialmente para a Folha 6, onde encontra (63, R63), que está dentro do intervalo [60, 90], e (97, R97), que já ultrapassa o limite superior. Com isso, o resultado final é [(63, 'R63')], sem necessidade de visitar páginas de overflow.
 
 ---
 
