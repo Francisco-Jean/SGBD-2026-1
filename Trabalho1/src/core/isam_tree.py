@@ -82,13 +82,39 @@ class ISAMTree:
         print("\n" + "=" * 60)
     
     def insert(self, key, value):
-        primary_page, folha_lista = self._navigate_to_primary_page(key)
-        if primary_page:
-            sucesso = PageManager.insert_with_overflow(primary_page, int(key), value)
-            if sucesso:
-                self._sync_page_to_list(primary_page, folha_lista)
-            return sucesso
-        return False
+        return self.insert_with_cost(key, value)["success"]
+
+    def insert_with_cost(self, key, value):
+        primary_page, folha_lista, nav = self._navigate_to_primary_page(
+            key, include_navigation=True
+        )
+        if not primary_page:
+            return {
+                "success": False,
+                "record": (int(key), value),
+                "visited_pages": [],
+                "nodes_visited": 0,
+                "overflow_pages_visited": 0,
+                "cost": 0,
+            }
+
+        insert_result = PageManager.insert_with_overflow_details(
+            primary_page, int(key), value
+        )
+
+        if insert_result["success"]:
+            self._sync_page_to_list(primary_page, folha_lista)
+
+        total_cost = nav["nodes_visited"] + insert_result["overflow_pages_visited"]
+        return {
+            "success": insert_result["success"],
+            "record": (int(key), value),
+            "visited_pages": nav["visited_pages"],
+            "nodes_visited": nav["nodes_visited"],
+            "overflow_pages_visited": insert_result["overflow_pages_visited"],
+            "overflow_pages_created": insert_result["overflow_pages_created"],
+            "cost": total_cost,
+        }
 
     def count_overflow_pages(self):
         total_overflows = 0
@@ -109,24 +135,61 @@ class ISAMTree:
         return len(self.folhas)
     
     def remove(self, key):
-        primary_page, folha_lista = self._navigate_to_primary_page(key)
-        if primary_page:
-            resultado = PageManager.remove_with_reorganization(primary_page, key)
-            self._sync_page_to_list(primary_page, folha_lista)
-            return resultado
-        return False
+        return self.remove_with_cost(key)["success"]
+
+    def remove_with_cost(self, key):
+        primary_page, folha_lista, nav = self._navigate_to_primary_page(
+            key, include_navigation=True
+        )
+        if not primary_page:
+            return {
+                "success": False,
+                "key": int(key),
+                "visited_pages": [],
+                "nodes_visited": 0,
+                "overflow_pages_visited": 0,
+                "cost": 0,
+            }
+
+        remove_result = PageManager.remove_with_reorganization_details(
+            primary_page, int(key)
+        )
+        self._sync_page_to_list(primary_page, folha_lista)
+
+        total_cost = nav["nodes_visited"] + remove_result["overflow_pages_visited"]
+        return {
+            "success": remove_result["success"],
+            "key": int(key),
+            "visited_pages": nav["visited_pages"],
+            "nodes_visited": nav["nodes_visited"],
+            "overflow_pages_visited": remove_result["overflow_pages_visited"],
+            "cost": total_cost,
+        }
     
     def search(self, key):
         result = searcher.search_equal(self.raiz, key, metrics=self.search_metrics)
         return (result["location"], result["record"])
 
+    def search_with_cost(self, key):
+        return searcher.search_equal(self.raiz, key, metrics=self.search_metrics)
+
     def search_interval(self, start_key, end_key):
+        return searcher.search_range(self.raiz, start_key, end_key)
+
+    def search_interval_with_cost(self, start_key, end_key):
         return searcher.search_range(self.raiz, start_key, end_key)
 
     def get_equality_search_metrics(self):
         return self.search_metrics.get_equality_metrics()
     
-    def _navigate_to_primary_page(self, key):
+    def get_overflow_metrics(self):
+        return {
+            "quantidade_paginas_folha": self.count_leaf_pages(),
+            "quantidade_paginas_overflow": self.count_overflow_pages(),
+            "tamanho_medio_cadeias_overflow": self.average_overflow_length(),
+        }
+    
+    def _navigate_to_primary_page(self, key, include_navigation=False):
         """
         Navega pela árvore até encontrar a página primária correta para a chave.
         """
@@ -135,8 +198,12 @@ class ISAMTree:
         # Escolhe qual nó intermediário seguir
         if int(key) < raiz:
             no_intermediario = self.raiz[1][0]
+            inter_label = "intermediario_n1_esquerdo"
+            base_index = 0
         else:
             no_intermediario = self.raiz[1][1]
+            inter_label = "intermediario_n1_direito"
+            base_index = 3
         
         # Nível intermediário 1 -> escolhe nó intermediário 2
         chaves = no_intermediario[0]
@@ -146,10 +213,13 @@ class ISAMTree:
         
         if key_int < chaves[0]:
             no_n2 = nos_n2[0]
+            local_leaf_index = 0
         elif key_int < chaves[1]:
             no_n2 = nos_n2[1]
+            local_leaf_index = 1
         else:
             no_n2 = nos_n2[2]
+            local_leaf_index = 2
 
         # Nível intermediário 2 -> folha primária
         folha_lista = no_n2[1][0] if not self._is_leaf_page(no_n2) else no_n2
@@ -160,8 +230,20 @@ class ISAMTree:
         for over_list in folha_lista[1]:
             over_page = OverflowPage(over_list.copy())
             page.add_overflow(over_page)
-            
-        return page, folha_lista
+
+        if not include_navigation:
+            return page, folha_lista
+
+        global_leaf_index = base_index + local_leaf_index
+        n2_key1, n2_key2 = no_n2[0] if not self._is_leaf_page(no_n2) else ("?", "?")
+        visited_pages = [
+            "raiz",
+            f"{inter_label}[{chaves[0]},{chaves[1]}]",
+            f"intermediario_n2[{n2_key1},{n2_key2}]",
+            f"folha_{global_leaf_index + 1}",
+        ]
+        nav = {"visited_pages": visited_pages, "nodes_visited": len(visited_pages)}
+        return page, folha_lista, nav
 
     @staticmethod
     def _is_leaf_page(node):
