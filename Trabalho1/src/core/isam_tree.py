@@ -1,5 +1,7 @@
 # src/core/isam_tree.py
 from ..operations import remover
+from ..operations import searcher
+from ..metrics.search_metrics import SearchMetrics
 from .page_manager import PageManager
 from .primary_page import PrimaryPage
 from .overflow_page import OverflowPage
@@ -17,6 +19,7 @@ class ISAMTree:
         """Inicializa a árvore ISAM com estrutura predefinida."""
         self.raiz = None
         self.folhas = []
+        self.search_metrics = SearchMetrics()
         self._construir_arvore_estatica()
     
     def _construir_arvore_estatica(self):
@@ -98,11 +101,14 @@ class ISAMTree:
         return False
     
     def search(self, key):
-        # Navega até a página primária correta
-        primary_page, _ = self._navigate_to_primary_page(key)
-        if primary_page:
-            return PageManager.search_record_in_all_pages(primary_page, key)
-        return (None, None)
+        result = searcher.search_equal(self.raiz, key, metrics=self.search_metrics)
+        return (result["location"], result["record"])
+
+    def search_interval(self, start_key, end_key):
+        return searcher.search_range(self.raiz, start_key, end_key)
+
+    def get_equality_search_metrics(self):
+        return self.search_metrics.get_equality_metrics()
     
     def _navigate_to_primary_page(self, key):
         """

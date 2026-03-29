@@ -1,10 +1,9 @@
 from src.core.isam_tree import ISAMTree
-from src.core.page_manager import PageManager
 from src.core.overflow_page import OverflowPage
+from src.core.page_manager import PageManager
 
 
 class Menu:
-
     def __init__(self, arvore_isam):
         self.arvore = arvore_isam
         self.show_menu()
